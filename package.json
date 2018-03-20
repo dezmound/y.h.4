@@ -5,14 +5,19 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "./node_modules/eslint/bin/eslint.js \"**/*.js\" && ./node_modules/stylelint/bin/stylelint.js \"**/*.?css\""
+    "lint": "./node_modules/eslint/bin/eslint.js \"**/*.js\" && ./node_modules/stylelint/bin/stylelint.js \"**/*.?css\"",
+    "dev": "webpack --mode development"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "eslint": "^4.19.0",
     "eslint-config-google": "^0.9.1",
-    "stylelint": "^9.1.3"
+    "stylelint": "^9.1.3",
+    "webpack": "^4.1.1",
+    "webpack-cli": "^2.0.12"
   },
-  "dependencies": {}
+  "dependencies": {
+    "express": "^4.16.3"
+  }
 }
