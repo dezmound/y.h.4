@@ -1,6 +1,46 @@
 const {spawn} = require('child_process');
-const {fs} = require('fs');
-const {util} = require('util');
+const fs = require('fs');
+const util = require('util');
+const path = require('path');
+
+const GitCodes = {
+    OK: 0x0,
+    ERR: 0x1,
+};
+
+const logFormat = `
+{
+%n  "commit": "%H",
+%n  "abbreviated_commit": "%h",
+%n  "refs": "%D",
+%n  "subject": "%s",
+%n  "body": "%b",
+%n  "author": {
+        %n    "name": "%aN",
+        %n    "email": "%aE",
+        %n    "date": "%aD"%n  
+    },
+%n  "commiter": {
+        %n    "name": "%cN",
+        %n    "email": "%cE",
+        %n    "date": "%cD"%n 
+     }
+%n},`;
+
+/**
+ * Преобразует метод класса, для работы на Promise вместо callback.
+ * @param {Object} object
+ * @param {function} method
+ * @return {*|any}
+ */
+const promisifyMethod = (object, method) => {
+    method[util.promisify.custom] = (..._args) => {
+        return new Promise((resolve) => {
+            object[method.name](..._args, (...args) => resolve(...args));
+        });
+    };
+    return util.promisify(method).bind(object);
+};
 
 /**
  * Исключение, возникающае при работе модуля git.
@@ -27,21 +67,116 @@ class Git {
      * @param {Object} [options] Первичная конфигурация.
      */
     constructor(options) {
-        this._options = Object.assign({}, options);
+        this._options = Object.assign({
+            pwd: path.resolve(__dirname),
+            git: 'git',
+        }, options);
+        this._pwd = this._options.pwd;
+        this._git = this._options.git;
+    }
+
+    /**
+     * Возвращает опции для локального git репозитория.
+     * @return {Object}
+     */
+    get options() {
+        return this._options;
+    }
+
+    /**
+     * Инициализуерт в директории пустой репозиторий.
+     * @return {Promise<boolean>}
+     */
+    async init() {
+        const _process = spawn('git', ['init'], {
+            pwd: this._pwd,
+        });
+        return promisifyMethod(_process, _process.on)('exit')
+            .then((code) => code === GitCodes.OK);
+    }
+
+    /**
+     * Делает комит в локальный git репозиторий.
+     * @param {string} commitTitle Заголовок комита
+     * @param {string} commitMessage Сообщение
+     * @return {Promise<boolean>}
+     */
+    async commit(commitTitle, commitMessage) {
+        const _process = spawn('git', [
+            'commit',
+            `-m "$( printf '${commitTitle}\n\n${commitMessage}')"`,
+        ], {
+            pwd: this._pwd,
+        });
+        return promisifyMethod(_process, _process.on)('exit')
+            .then((code) => code === GitCodes.OK);
+    }
+
+    /**
+     * Добавляет файлы, переданные в строке к текущему состоянию.
+     * @param {string} names
+     * @return {Promise<void>}
+     */
+    async add(names) {
+        const _process = spawn('git', ['add', names]);
+        return promisifyMethod(_process, _process.on)('exit')
+            .then((code) => code === GitCodes.OK);
+    }
+
+    /**
+     * Запращивает статус репозитория
+     * @throws {GitError} В случае если репозиторий не инициализирован
+     * @return {Promise<string>}
+     */
+    async status() {
+        const _process = spawn('git', ['status'], {
+            pwd: this._pwd,
+        });
+        const _promisified = promisifyMethod(_process, _process.on);
+        const _promisifiedData = promisifyMethod(
+            _process.stdout, _process.stdout.on
+        );
+        return Promise.all([
+            _promisifiedData('data').then((data) => data),
+            _promisified('exit').then((code) => code),
+        ]).then(([data, code]) => {
+            if (code === GitCodes.OK) {
+                return data;
+            }
+            throw new TypeError('Ошибка при проверке статуса: ' + data);
+        });
     }
 
     /**
      * Возвращает имя текущей ветки. Если передан параметер,
      * переключится на эту ветку.
-     * @param {string} branch Имя ветки на которую нужно переключится.
+     * @param {string|undefined} [branch] Имя ветки на которую
+     * нужно переключится.
      * @return {Promise<string>}
      * @throws {GitError}
      */
-    branch(branch) {
+    async branch(branch) {
         if (branch !== undefined) {
             return this.checkout(branch);
         }
-        return Promise.resolve(branch);
+        const _process = spawn('git', ['branch'], {
+            pwd: this._pwd,
+        });
+        const _promisified = promisifyMethod(_process, _process.on);
+        const _promisifiedData = promisifyMethod(
+            _process.stdout, _process.stdout.on
+        );
+        return Promise.all([
+            _promisifiedData('data').then((data) => data),
+            _promisified('exit').then((code) => code),
+        ]).then(([data, code]) => {
+            if (code === GitCodes.OK) {
+                return data.split(/\R+/ig).filter((s) => {
+                    return s.indexOf('*') >= 0;
+                }).pop().replace(/^[*\s]+|[*\s]+$/g, '');
+            }
+            throw new TypeError('Ошибка при получении ветки: ' + data);
+        });
     }
 
     /**
@@ -49,34 +184,110 @@ class Git {
      * @return {Promise<Array<GitBranch>>}
      */
     async branches() {
-        return Promise.resolve([]);
+        const _process = spawn('git', ['branch'], {
+            pwd: this._pwd,
+        });
+        const _promisified = promisifyMethod(_process, _process.on);
+        const _promisifiedData = promisifyMethod(
+            _process.stdout, _process.stdout.on
+        );
+        return Promise.all([
+            _promisifiedData('data').then((data) => data),
+            _promisified('exit').then((code) => code),
+        ]).then(([data, code]) => {
+            if (code === GitCodes.OK) {
+                return data.split(/\R+/ig).map((s) => {
+                    return s.replace(/^[*\s]+|[*\s]+$/g, '');
+                });
+            }
+            throw new TypeError('Ошибка при получении списка веток: ' + data);
+        });
     }
 
     /**
      * Переключает HEAD на указанную ветку/комит.
-     * @param {GitBranch|GitCommit|string} where Имя ветки/комита.
+     * @param {GitRef|string} where Имя ветки/комита.
      * @throws {GitError} В случае если не удалось переключить HEAD.
      * @return {Promise<string>}
      */
     async checkout(where) {
-        return Promise.resolve(where);
+        const _process = spawn('git', ['checkout', where], {
+            pwd: this._pwd,
+        });
+        const _promisified = promisifyMethod(_process, _process.on);
+        const _promisifiedData = promisifyMethod(
+            _process.stdout, _process.stdout.on
+        );
+        const _oldBranch = await this.branch();
+        return Promise.all([
+            _promisifiedData('data').then((data) => data),
+            _promisified('exit').then((code) => code),
+        ]).then(([data, code]) => {
+            if (code === GitCodes.OK && data.indexOf(where) >= 0) {
+                return _oldBranch;
+            }
+            throw new TypeError('Ошибка при переключении HEAD: ' + data);
+        });
     }
 
     /**
      * Возвращает историю коммитовв формате объектов.
-     * @param {String} path Выводит историю коммитов по хаданному пути.
+     * @param {String} path Выводит историю коммитов по заданному пути.
      * @return {Promise<Array<GitCommit>>}.
      */
     async log(path = '') {
-        return Promise.resolve([]);
+        const _process = spawn('git', [
+            'log', `--pretty=format:${logFormat}`, path,
+        ], {
+            pwd: this._pwd,
+        });
+        const _promisified = promisifyMethod(_process, _process.on);
+        const _promisifiedData = promisifyMethod(
+            _process.stdout, _process.stdout.on
+        );
+        return Promise.all([
+            _promisifiedData('data').then((data) => data),
+            _promisified('exit').then((code) => code),
+        ]).then(([data, code]) => {
+            if (code === GitCodes.OK) {
+                return JSON.parse(`[${data.replace(/,+$/g, '')}]`).map(
+                    (c) => new GitCommit(c)
+                );
+            }
+            throw new TypeError(
+                'Ошибка при получении истории комитов: ' + data
+            );
+        });
     }
 
     /**
-     *
+     * Возвращает структуру файловой системы по ссылке.
+     * @param {GitRef|string} ref
      * @return {Promise<Array<GitFile>>}
      */
-    async workingCopy() {
-        return Promise.resolve([]);
+    async fileStructure(ref = 'HEAD') {
+        const _process = spawn('git', [
+            'ls-tree', '--name-only', ref.toString(),
+        ], {
+            pwd: this._pwd,
+        });
+        const _promisified = promisifyMethod(_process, _process.on);
+        const _promisifiedData = promisifyMethod(
+            _promisified.stdout, _promisified.stdout.on
+        );
+        return Promise.all([
+            _promisifiedData('data').then((data) => data),
+            _promisified('exit').then((code) => code),
+        ]).then(([data, code]) => {
+            if (code === GitCodes.OK) {
+                return JSON.parse(`[${data.replace(/,+$/g, '')}]`).map(
+                    (c) => new GitCommit(c)
+                );
+            }
+            throw new TypeError(
+                'Ошибка при получении истории комитов: ' + data
+            );
+        });
     }
 }
 
@@ -87,10 +298,12 @@ class Git {
 class GitRef {
     /**
      * Конструктор класса
-     * @param {string} ref Имя ссылки
+     * @param {Object} options Имя ссылки
      */
-    constructor(ref) {
-        this._ref = ref;
+    constructor(options) {
+        this._options = Object.assign({
+            ref: '',
+        }, options);
     }
 
     /**
@@ -98,15 +311,14 @@ class GitRef {
      * @return {string|*}
      */
     get ref() {
-        return this._ref;
+        return this._options.ref;
     }
 
     /**
      * @return {string|*}
-     * @private
      */
-    __toString() {
-        return this._ref;
+    toString() {
+        return this.ref;
     }
 }
 
@@ -120,31 +332,35 @@ class GitBranch extends GitRef {}
  */
 class GitCommit extends GitRef {
     /**
-     * Конструктор класса.
-     * @param {string} ref
-     * @param {string} message
-     * @param {int} date
+     * @inheritDoc
      */
-    constructor(ref, message, date) {
-        super(ref);
-        this._message = message;
-        this._date = date;
+    constructor(options) {
+        super(options);
+        this._options = Object.assign({
+            commit: '',
+            abbreviated_commit: '',
+            refs: '',
+            subject: '',
+            author: {},
+            commiter: {},
+        }, this._options, options);
     }
 
     /**
-     * Сообщение комита.
-     * @return {string|*}
+     * Возвращает информацию о коммите.
+     * @return {Object}
      */
-    get message() {
-        return this._message;
+    get info() {
+        return Object.assign({}, this._options);
     }
 
     /**
-     * Дата комита.
-     * @return {int|*}
+     * @return {string}
      */
-    get date() {
-        return this._date;
+    toString() {
+        return `${this.info.abbreviated_commit} 
+        ${this.info.title} 
+        ${this.info.commiter.date}`;
     }
 }
 
@@ -154,12 +370,27 @@ class GitCommit extends GitRef {
 class GitFile {
     /**
      * Конструктор класса.
+     * @param {string} name
      * @param {string} path
      * @param {Boolean} isDir
      */
-    constructor(path, isDir) {
+    constructor(name, path, isDir) {
+        this._name = name;
         this._path = path;
         this._isDir = isDir || false;
+    }
+
+    /**
+     * Парсит название файла, возвращает объект GitFile.
+     * @param {string} name
+     * @return {self}
+     */
+    static parse(name) {
+        return new this(
+            name.split('/').slice(-1).pop(),
+            name,
+            fs.statSync(name).isDirectory()
+        );
     }
 
     /**
@@ -179,41 +410,10 @@ class GitFile {
     }
 
     /**
-     *
-     * @return {Promise<GitFile>}
-     */
-    async children() {
-        if (!this._isDir) {
-            return Promise.resolve([]);
-        }
-        return util.promisfy(fs.readdir)(this._path)
-            .then((files) => files.map(
-                (f) => new GitFile(f, fs.statsSync(f).isDirectory())
-            ));
-    }
-
-    /**
-     * Возвращает дерево объектов для этого файла.
-     * @return {Promise<Array<Array|GitFile>>}
-     */
-    async tree() {
-        if (!this._isDir) {
-            return Promise.resolve([]);
-        }
-        return this.children().map(async (f) => {
-            if (!f.isDir) {
-                return f;
-            }
-            return await f.tree();
-        });
-    }
-
-    /**
      * @return {string | undefined}
-     * @private
      */
-    __toString() {
-        return this._path.split('/').slice(-1).pop();
+    toString() {
+        return this._name;
     }
 }
 
@@ -222,4 +422,5 @@ module.exports = {
     Git,
     GitBranch,
     GitCommit,
+    promisifyMethod,
 };

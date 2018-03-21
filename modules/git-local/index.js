@@ -1,4 +1,4 @@
-const {Git, GitBranch, GitCommit} = require('./git');
+const {Git, GitBranch, GitCommit} = require('../git');
 
 /**
  * Предоставляет интерфейс к информации о локальном репозитории git.
@@ -44,3 +44,5 @@ class GitLocal {
         return this._git.log(branch);
     }
 }
+
+module.exports = GitLocal;
