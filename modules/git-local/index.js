@@ -12,7 +12,8 @@ class GitLocal {
         this._options = Object.assign({
             git: {},
         }, options);
-        this._git = new Git(this._options.git);
+        this._git = this._options.git instanceof Git ?
+            this._options.git : new Git(this._options.git);
     }
 
     /**
@@ -26,13 +27,10 @@ class GitLocal {
     /**
      * Возвращает структуру файловой системы для переданной ссылки.
      * @param {GitCommit|GitBranch|string} ref Ссылка на объект.
-     * @return {Array<Array|string>}
+     * @return {Promise<Array<GitFile>>}
      */
     async fileStructure(ref) {
-        let _oldRef = await this._git.checkout(ref);
-        let _result = await this._git.workingCopy();
-        await this._git.checkout(_oldRef);
-        return _result;
+        return this._git.fileStructure(ref);
     }
 
     /**

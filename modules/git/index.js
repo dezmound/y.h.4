@@ -89,11 +89,12 @@ class Git {
 
     /**
      * Инициализуерт в директории пустой репозиторий.
+     * @param {Array<string>} [flags] Флаги
      * @return {Promise<boolean>}
      */
-    async init() {
-        const _process = spawn('git', ['init'], {
-            pwd: this._pwd,
+    async init(flags = []) {
+        const _process = spawn('git', ['init', ...flags], {
+            cwd: this._pwd,
         });
         return promisifyMethod(_process, _process.on)('exit')
             .then((code) => code === GitCodes.OK);
@@ -103,14 +104,17 @@ class Git {
      * Делает комит в локальный git репозиторий.
      * @param {string} commitTitle Заголовок комита
      * @param {string} commitMessage Сообщение
+     * @param {Array<string>} [flags] Флаги
      * @return {Promise<boolean>}
      */
-    async commit(commitTitle, commitMessage) {
+    async commit(commitTitle, commitMessage, flags = []) {
         const _process = spawn('git', [
             'commit',
-            `-m "$( printf '${commitTitle}\n\n${commitMessage}')"`,
+            '-m',
+            `${commitTitle}\n\n${commitMessage}`,
+            ...flags,
         ], {
-            pwd: this._pwd,
+            cwd: this._pwd,
         });
         return promisifyMethod(_process, _process.on)('exit')
             .then((code) => code === GitCodes.OK);
@@ -118,11 +122,15 @@ class Git {
 
     /**
      * Добавляет файлы, переданные в строке к текущему состоянию.
-     * @param {string} names
+     * @param {Array<string>|string} names
+     * @param {Array<string>} [flags] Флаги
      * @return {Promise<void>}
      */
-    async add(names) {
-        const _process = spawn('git', ['add', names]);
+    async add(names, flags = []) {
+        names = typeof names === 'string' ? [names] : names;
+        const _process = spawn('git', ['add', ...names, ...flags], {
+            cwd: this._pwd,
+        });
         return promisifyMethod(_process, _process.on)('exit')
             .then((code) => code === GitCodes.OK);
     }
@@ -130,18 +138,25 @@ class Git {
     /**
      * Запращивает статус репозитория
      * @throws {GitError} В случае если репозиторий не инициализирован
+     * @param {Array<string>} [flags] Флаги
      * @return {Promise<string>}
      */
-    async status() {
-        const _process = spawn('git', ['status'], {
-            pwd: this._pwd,
+    async status(flags = []) {
+        const _process = spawn('git', ['status', ...flags], {
+            cwd: this._pwd,
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
             _process.stdout, _process.stdout.on, 'on'
         );
+        const _promisifiedErr = promisifyMethod(
+            _process.stderr, _process.stderr.on, 'on'
+        );
         return Promise.all([
-            _promisifiedData('data').then((data) => data),
+            Promise.race([
+                _promisifiedData('data'),
+                _promisifiedErr('data'),
+            ]),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK) {
@@ -156,26 +171,33 @@ class Git {
      * переключится на эту ветку.
      * @param {string|undefined} [branch] Имя ветки на которую
      * нужно переключится.
+     * @param {Array<string>} [flags] Флаги
      * @return {Promise<string>}
      * @throws {GitError}
      */
-    async branch(branch) {
+    async branch(branch, flags = []) {
         if (branch !== undefined) {
-            return this.checkout(branch);
+            return this.checkout(branch, flags);
         }
-        const _process = spawn('git', ['branch'], {
-            pwd: this._pwd,
+        const _process = spawn('git', ['branch', ...flags], {
+            cwd: this._pwd,
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
             _process.stdout, _process.stdout.on, 'on'
         );
+        const _promisifiedErr = promisifyMethod(
+            _process.stderr, _process.stderr.on, 'on'
+        );
         return Promise.all([
-            _promisifiedData('data').then((data) => data),
+            Promise.race([
+                _promisifiedData('data'),
+                _promisifiedErr('data'),
+            ]),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return data.toString().split(/\R+/ig).filter((s) => {
+                return data.toString().split(/[\n\r]+/ig).filter((s) => {
                     return s.indexOf('*') >= 0;
                 }).pop().replace(/^[*\s]+|[*\s]+$/g, '');
             }
@@ -185,24 +207,33 @@ class Git {
 
     /**
      * Возвращает список веток в формате объекта.
+     * @param {Array<string>} [flags] Флаги
      * @return {Promise<Array<GitBranch>>}
      */
-    async branches() {
-        const _process = spawn('git', ['branch'], {
-            pwd: this._pwd,
+    async branches(flags = []) {
+        const _process = spawn('git', ['branch', ...flags], {
+            cwd: this._pwd,
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
             _process.stdout, _process.stdout.on, 'on'
         );
+        const _promisifiedErr = promisifyMethod(
+            _process.stderr, _process.stderr.on, 'on'
+        );
         return Promise.all([
-            _promisifiedData('data').then((data) => data),
+            Promise.race([
+                _promisifiedData('data'),
+                _promisifiedErr('data'),
+            ]),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return data.toString().split(/\R+/ig).map((s) => {
-                    return s.replace(/^[*\s]+|[*\s]+$/g, '');
-                });
+                return data.toString()
+                    .split(/\R+/ig)
+                    .map((s) => {
+                        return s.replace(/^[*\s]+|[*\s]+$/g, '');
+                    });
             }
             throw new TypeError('Ошибка при получении списка веток: ' + data);
         });
@@ -211,20 +242,29 @@ class Git {
     /**
      * Переключает HEAD на указанную ветку/комит.
      * @param {GitRef|string} where Имя ветки/комита.
+     * @param {Array<string>} [flags] Флаги
      * @throws {GitError} В случае если не удалось переключить HEAD.
      * @return {Promise<string>}
      */
-    async checkout(where) {
-        const _process = spawn('git', ['checkout', where], {
-            pwd: this._pwd,
+    async checkout(where, flags = []) {
+        const _oldBranch = await this.branch();
+        const _process = spawn('git', [
+            'checkout', ...flags, where.toString(),
+        ], {
+            cwd: this._pwd,
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
             _process.stdout, _process.stdout.on, 'on'
         );
-        const _oldBranch = await this.branch();
+        const _promisifiedErr = promisifyMethod(
+            _process.stderr, _process.stderr.on, 'on'
+        );
         return Promise.all([
-            _promisifiedData('data').then((data) => data),
+            Promise.race([
+                _promisifiedData('data'),
+                _promisifiedErr('data'),
+            ]),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK && data.toString().indexOf(where) >= 0) {
@@ -237,24 +277,33 @@ class Git {
     /**
      * Возвращает историю коммитовв формате объектов.
      * @param {String} path Выводит историю коммитов по заданному пути.
+     * @param {Array<string>} [flags] Флаги
      * @return {Promise<Array<GitCommit>>}.
      */
-    async log(path = '') {
+    async log(path = 'HEAD', flags = []) {
         const _process = spawn('git', [
-            'log', `--pretty=format:${logFormat}`, path,
+            'log', `--pretty=format:${logFormat}`,
+            path, ...flags, '--',
         ], {
-            pwd: this._pwd,
+            cwd: this._pwd,
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
             _process.stdout, _process.stdout.on, 'on'
         );
+        const _promisifiedErr = promisifyMethod(
+            _process.stderr, _process.stderr.on, 'on'
+        );
         return Promise.all([
-            _promisifiedData('data').then((data) => data),
+            Promise.race([
+                _promisifiedData('data'),
+                _promisifiedErr('data'),
+            ]),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return JSON.parse(`[${data.toString().replace(/,+$/g, '')}]`)
+                return JSON.parse(`[${data.toString().replace(/[\n\r]+"/g, '"')
+                    .replace(/,+$/g, '')}]`)
                     .map((c) => new GitCommit(c));
             }
             throw new TypeError(
@@ -266,28 +315,40 @@ class Git {
     /**
      * Возвращает структуру файловой системы по ссылке.
      * @param {GitRef|string} ref
+     * @param {Array<string>} [flags] Флаги
      * @return {Promise<Array<GitFile>>}
      */
-    async fileStructure(ref = 'HEAD') {
+    async fileStructure(ref = 'HEAD', flags = []) {
         const _process = spawn('git', [
             'ls-tree', '--name-only', ref.toString(),
+            ...flags,
         ], {
-            pwd: this._pwd,
+            cwd: this._pwd,
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
-            _promisified.stdout, _promisified.stdout.on, 'on'
+            _process.stdout, _process.stdout.on, 'on'
+        );
+        const _promisifiedErr = promisifyMethod(
+            _process.stderr, _process.stderr.on, 'on'
         );
         return Promise.all([
-            _promisifiedData('data').then((data) => data),
+            Promise.race([
+                _promisifiedData('data'),
+                _promisifiedErr('data'),
+            ]),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return JSON.parse(`[${data.toString().replace(/,+$/g, '')}]`)
-                    .map((c) => new GitCommit(c));
+                return data.toString()
+                    .split(/[\n\r]+/g)
+                    .filter((s) => s)
+                    .map((c) => {
+                        return GitFile.parse(`${this._pwd}/${c}`);
+                    });
             }
             throw new TypeError(
-                'Ошибка при получении истории комитов: ' + data
+                'Ошибка при получении списка файлов: ' + data
             );
         });
     }
@@ -424,5 +485,4 @@ module.exports = {
     Git,
     GitBranch,
     GitCommit,
-    promisifyMethod,
 };

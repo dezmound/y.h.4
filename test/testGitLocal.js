@@ -22,7 +22,7 @@ const initTest = async (git) => {
     fs.writeFileSync(git.options.pwd + '/.dir/dir1/.2', '.2');
     await git.add('.');
     await git.commit('Test commit', 'Test commit');
-    await git.checkout('-b test');
+    await git.checkout('test', ['-b']);
     fs.writeFileSync(git.options.pwd + '/.3', '.3');
     fs.mkdirSync(git.options.pwd + '/.dir3');
     fs.writeFileSync(git.options.pwd + '/.dir3/.4', '.4');
@@ -56,7 +56,8 @@ describe('Git local', () => {
         });
         await initTest(_git);
         return _gitLocal.fileStructure('master').should.eventually.to
-            .be.an('array').that.contains('.0');
+            .be.an('array').cast((a) => a.map((f) => f.toString()))
+            .that.contains('.0');
     });
     it('should return commits for branch', async () => {
         const path = tmpDir + '/' + crypto.randomBytes(16).toString('hex');
