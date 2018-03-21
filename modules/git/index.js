@@ -31,12 +31,16 @@ const logFormat = `
  * Преобразует метод класса, для работы на Promise вместо callback.
  * @param {Object} object
  * @param {function} method
+ * @param {string} [methodName] Лучше задавать явно, например,
+ * в случае если передается лямда-функция.
  * @return {*|any}
  */
-const promisifyMethod = (object, method) => {
+const promisifyMethod = (object, method, methodName = '') => {
     method[util.promisify.custom] = (..._args) => {
         return new Promise((resolve) => {
-            object[method.name](..._args, (...args) => resolve(...args));
+            object[method.name || methodName](
+                ..._args, (...args) => resolve(...args)
+            );
         });
     };
     return util.promisify(method).bind(object);
@@ -134,14 +138,14 @@ class Git {
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on
+            _process.stdout, _process.stdout.on, 'on'
         );
         return Promise.all([
             _promisifiedData('data').then((data) => data),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return data;
+                return data.toString();
             }
             throw new TypeError('Ошибка при проверке статуса: ' + data);
         });
@@ -164,14 +168,14 @@ class Git {
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on
+            _process.stdout, _process.stdout.on, 'on'
         );
         return Promise.all([
             _promisifiedData('data').then((data) => data),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return data.split(/\R+/ig).filter((s) => {
+                return data.toString().split(/\R+/ig).filter((s) => {
                     return s.indexOf('*') >= 0;
                 }).pop().replace(/^[*\s]+|[*\s]+$/g, '');
             }
@@ -189,14 +193,14 @@ class Git {
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on
+            _process.stdout, _process.stdout.on, 'on'
         );
         return Promise.all([
             _promisifiedData('data').then((data) => data),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return data.split(/\R+/ig).map((s) => {
+                return data.toString().split(/\R+/ig).map((s) => {
                     return s.replace(/^[*\s]+|[*\s]+$/g, '');
                 });
             }
@@ -216,14 +220,14 @@ class Git {
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on
+            _process.stdout, _process.stdout.on, 'on'
         );
         const _oldBranch = await this.branch();
         return Promise.all([
             _promisifiedData('data').then((data) => data),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
-            if (code === GitCodes.OK && data.indexOf(where) >= 0) {
+            if (code === GitCodes.OK && data.toString().indexOf(where) >= 0) {
                 return _oldBranch;
             }
             throw new TypeError('Ошибка при переключении HEAD: ' + data);
@@ -243,16 +247,15 @@ class Git {
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on
+            _process.stdout, _process.stdout.on, 'on'
         );
         return Promise.all([
             _promisifiedData('data').then((data) => data),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return JSON.parse(`[${data.replace(/,+$/g, '')}]`).map(
-                    (c) => new GitCommit(c)
-                );
+                return JSON.parse(`[${data.toString().replace(/,+$/g, '')}]`)
+                    .map((c) => new GitCommit(c));
             }
             throw new TypeError(
                 'Ошибка при получении истории комитов: ' + data
@@ -273,16 +276,15 @@ class Git {
         });
         const _promisified = promisifyMethod(_process, _process.on);
         const _promisifiedData = promisifyMethod(
-            _promisified.stdout, _promisified.stdout.on
+            _promisified.stdout, _promisified.stdout.on, 'on'
         );
         return Promise.all([
             _promisifiedData('data').then((data) => data),
             _promisified('exit').then((code) => code),
         ]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return JSON.parse(`[${data.replace(/,+$/g, '')}]`).map(
-                    (c) => new GitCommit(c)
-                );
+                return JSON.parse(`[${data.toString().replace(/,+$/g, '')}]`)
+                    .map((c) => new GitCommit(c));
             }
             throw new TypeError(
                 'Ошибка при получении истории комитов: ' + data
