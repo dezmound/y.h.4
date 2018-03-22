@@ -41,6 +41,15 @@ class GitLocal {
     async commitHistory(branch) {
         return this._git.log(branch);
     }
+
+    /**
+     * Открыват файл/директорию.
+     * @param {GitRef|string} ref
+     * @return {Promise<Array<GitFile>|Buffer>}
+     */
+    async open(ref) {
+        return this._git.open(ref);
+    }
 }
 
 module.exports = GitLocal;

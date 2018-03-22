@@ -315,12 +315,13 @@ class Git {
     /**
      * Возвращает структуру файловой системы по ссылке.
      * @param {GitRef|string} ref
+     * @param {string} root Корень текущей директории относительно ссылки ref.
      * @param {Array<string>} [flags] Флаги
      * @return {Promise<Array<GitFile>>}
      */
-    async fileStructure(ref = 'HEAD', flags = []) {
+    async fileStructure(ref = 'HEAD', root='/', flags = []) {
         const _process = spawn('git', [
-            'ls-tree', '--name-only', ref.toString(),
+            'ls-tree', '--name-only', `${ref.toString()}:${root.replace(/^\//, '')}`,
             ...flags,
         ], {
             cwd: this._pwd,
@@ -344,8 +345,87 @@ class Git {
                     .split(/[\n\r]+/g)
                     .filter((s) => s)
                     .map((c) => {
-                        return GitFile.parse(`${this._pwd}/${c}`);
+                        return GitFile.parse(`${this._pwd}${root}${c}`);
                     });
+            }
+            throw new TypeError(
+                'Ошибка при получении списка файлов: ' + data
+            );
+        });
+    }
+
+    /**
+     * Возвращает содержимое объекта.
+     * @param {GitRef|string} ref
+     * @param {Array<string>} [flags] Флаги
+     * @return {Promise<Buffer>}
+     */
+    async contents(ref, flags = []) {
+        const _process = spawn('git', [
+            'cat-file', '-p', ref.toString(),
+            ...flags,
+        ], {
+            cwd: this._pwd,
+        });
+        const _promisified = promisifyMethod(_process, _process.on);
+        const _promisifiedData = promisifyMethod(
+            _process.stdout, _process.stdout.on, 'on'
+        );
+        const _promisifiedErr = promisifyMethod(
+            _process.stderr, _process.stderr.on, 'on'
+        );
+        return Promise.all([
+            Promise.race([
+                _promisifiedData('data'),
+                _promisifiedErr('data'),
+            ]),
+            _promisified('exit').then((code) => code),
+        ]).then(([data, code]) => {
+            if (code === GitCodes.OK) {
+                return data;
+            }
+            throw new TypeError(
+                'Ошибка при получении содержимого файлов: ' + data
+            );
+        });
+    }
+
+    /**
+     * Возвращает содержимое файла/директории
+     * @param {GitRef|string} ref
+     * @return {Promise<Array<GitFile>|Buffer>}
+     */
+    async open(ref) {
+        const _process = spawn('git', [
+            'cat-file', '-t', ref.toString(),
+        ], {
+            cwd: this._pwd,
+        });
+        const _promisified = promisifyMethod(_process, _process.on);
+        const _promisifiedData = promisifyMethod(
+            _process.stdout, _process.stdout.on, 'on'
+        );
+        const _promisifiedErr = promisifyMethod(
+            _process.stderr, _process.stderr.on, 'on'
+        );
+        let [_ref, _path] = ref.split(':');
+        _path = `/${_path}/`.replace('//', '/');
+        return Promise.all([
+            Promise.race([
+                _promisifiedData('data'),
+                _promisifiedErr('data'),
+            ]),
+            _promisified('exit').then((code) => code),
+        ]).then(async ([data, code]) => {
+            if (code === GitCodes.OK) {
+                switch (data.toString().trim()) {
+                    case 'tree':
+                        return await this.fileStructure(_ref, _path);
+                    case 'blob':
+                        return await this.contents(ref);
+                    default:
+                        throw new GitError('Неизвестный тип объекта');
+                }
             }
             throw new TypeError(
                 'Ошибка при получении списка файлов: ' + data
