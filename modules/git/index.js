@@ -321,7 +321,8 @@ class Git {
      */
     async fileStructure(ref = 'HEAD', root='/', flags = []) {
         const _process = spawn('git', [
-            'ls-tree', '--name-only', `${ref.toString()}:${root.replace(/^\//, '')}`,
+            'ls-tree', '--name-only',
+            `${ref.toString()}:${root.replace(/^\//, '')}`,
             ...flags,
         ], {
             cwd: this._pwd,
@@ -396,8 +397,9 @@ class Git {
      * @return {Promise<Array<GitFile>|Buffer>}
      */
     async open(ref) {
+        ref = ref.toString().replace(/^(\/+)|(\:)+$/g, '');
         const _process = spawn('git', [
-            'cat-file', '-t', ref.toString(),
+            'cat-file', '-t', ref,
         ], {
             cwd: this._pwd,
         });
@@ -409,6 +411,8 @@ class Git {
             _process.stderr, _process.stderr.on, 'on'
         );
         let [_ref, _path] = ref.split(':');
+        _ref = _ref.replace(/^\/+/, '');
+        _path = _path || '';
         _path = `/${_path}/`.replace('//', '/');
         return Promise.all([
             Promise.race([
@@ -420,6 +424,8 @@ class Git {
             if (code === GitCodes.OK) {
                 switch (data.toString().trim()) {
                     case 'tree':
+                        return await this.fileStructure(_ref, _path);
+                    case 'commit':
                         return await this.fileStructure(_ref, _path);
                     case 'blob':
                         return await this.contents(ref);
@@ -534,6 +540,14 @@ class GitFile {
             name,
             fs.statSync(name).isDirectory()
         );
+    }
+
+    /**
+     * Возвращает имя файла
+     * @return {string}
+     */
+    get name() {
+        return this._name;
     }
 
     /**

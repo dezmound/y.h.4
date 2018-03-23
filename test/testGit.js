@@ -107,4 +107,9 @@ describe('Git', () => {
         return _git.open('HEAD:.dir').should.eventually.to.be
             .an('array').that.have.own.property('length').that.equal(2);
     });
+    it('should open file', async () => {
+        const _git = await init();
+        return _git.open('HEAD:.0').should.eventually.to.be
+            .cast((b) => b.toString()).an('string').that.equal('.0');
+    });
 });
