@@ -2,6 +2,7 @@ const {spawn} = require('child_process');
 const fs = require('fs');
 const util = require('util');
 const path = require('path');
+const StreamCollector = require('../../utils/StreamCollector');
 
 const GitCodes = {
     OK: 0x0,
@@ -54,15 +55,13 @@ const promisifyMethod = (object, method, methodName = '') => {
 const getCommandPromise = (args) => {
     const _process = spawn(...args);
     const _promisified = promisifyMethod(_process, _process.on);
-    const _promisifiedData = promisifyMethod(
-        _process.stdout, _process.stdout.on, 'on'
-    );
+    const _promisifiedData = (new StreamCollector(_process.stdout)).promise;
     const _promisifiedErr = promisifyMethod(
         _process.stderr, _process.stderr.on, 'on'
     );
     return Promise.all([
         Promise.race([
-            _promisifiedData('data'),
+            _promisifiedData,
             _promisifiedErr('data'),
         ]),
         _promisified('exit'),
@@ -165,7 +164,7 @@ class Git {
      * @return {Promise<string>}
      */
     async status(flags = []) {
-        return getCommandPromise(['git', ['status', ...flags], {
+        return getCommandPromise(['git', ['--no-pager', 'status', ...flags], {
             cwd: this._pwd,
         }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
@@ -188,7 +187,7 @@ class Git {
         if (branch !== undefined) {
             return this.checkout(branch, flags);
         }
-        return getCommandPromise(['git', ['branch', ...flags], {
+        return getCommandPromise(['git', ['--no-pager', 'branch', ...flags], {
             cwd: this._pwd,
         }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
@@ -206,12 +205,13 @@ class Git {
      * @return {Promise<Array<GitBranch>>}
      */
     async branches(flags = []) {
-        return getCommandPromise(['git', ['branch', ...flags], {
+        return getCommandPromise(['git', ['--no-pager', 'branch', ...flags], {
             cwd: this._pwd,
         }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
                 return data.toString()
-                    .split(/\R+/ig)
+                    .split(/[\n\r]+/ig)
+                    .filter((s) => s)
                     .map((s) => {
                         return s.replace(/^[*\s]+|[*\s]+$/g, '');
                     });
@@ -249,7 +249,7 @@ class Git {
      */
     async log(path = 'HEAD', flags = []) {
         return getCommandPromise(['git', [
-            'log', `--pretty=format:${logFormat}`,
+            '--no-pager', 'log', `--pretty=format:${logFormat}`,
             path, ...flags, '--',
         ], {
             cwd: this._pwd,
@@ -274,7 +274,7 @@ class Git {
      */
     async fileStructure(ref = 'HEAD', root='/', flags = []) {
         return getCommandPromise(['git', [
-            'ls-tree', '--name-only',
+            '--no-pager', 'ls-tree', '--name-only',
             `${ref.toString()}:${root.replace(/^\//, '')}`,
             ...flags,
         ], {
@@ -302,7 +302,7 @@ class Git {
      */
     async contents(ref, flags = []) {
         return getCommandPromise(['git', [
-            'cat-file', '-p', ref.toString(),
+            '--no-pager', 'cat-file', '-p', ref.toString(),
             ...flags,
         ], {
             cwd: this._pwd,
@@ -328,7 +328,7 @@ class Git {
         _path = _path || '';
         _path = `/${_path}/`.replace('//', '/');
         return getCommandPromise(['git', [
-            'cat-file', '-t', ref,
+            '--no-pager', 'cat-file', '-t', ref,
         ], {
             cwd: this._pwd,
         }]).then(async ([data, code]) => {
