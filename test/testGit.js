@@ -42,7 +42,7 @@ const initTest = async (git) => {
 };
 
 describe('Git', () => {
-    it('should init repo', () => {
+    it('можно инициализировать репозиторий', () => {
         const path = tmpDir + '/' + crypto.randomBytes(16).toString('hex');
         fs.mkdirSync(path);
         const _git = new Git({
@@ -50,7 +50,7 @@ describe('Git', () => {
         });
         return _git.init().should.eventually.equal(true);
     });
-    it('should add files to commit', async () => {
+    it('можно добавить файлы в комит', async () => {
         const path = tmpDir + '/' + crypto.randomBytes(16).toString('hex');
         fs.mkdirSync(path);
         const _git = new Git({
@@ -60,7 +60,7 @@ describe('Git', () => {
         fs.writeFileSync(path + '/.0', '.0');
         return _git.add('.').should.eventually.to.equal(true);
     });
-    it('should show status', async () => {
+    it('можно проверить статус', async () => {
         const path = tmpDir + '/' + crypto.randomBytes(16).toString('hex');
         fs.mkdirSync(path);
         const _git = new Git({
@@ -71,43 +71,38 @@ describe('Git', () => {
         return _git.status().should.eventually
             .to.be.an('string').that.does.include('.0');
     });
-    it('should change branch', async () => {
+    it('можно переключить ветку', async () => {
         const _git = await init();
         await _git.branch('test');
         return _git.branch().should.eventually.to.equal('test');
     });
-    it('should return list of branches', async () => {
+    it('можно получить список веток', async () => {
         const _git = await init();
         return _git.branches().should.eventually.to.be.an('array')
             .with.property('length').that.equal(2);
     });
-    it('show file structure', async () => {
+    it('можно получить содержимое папки по ссылке', async () => {
         const _git = await init();
         return _git.fileStructure().should.eventually.to
             .be.an('array').cast((a) => a.map((f) => f.toString()))
-                .that.does.include('.0');
+            .that.does.include('.0');
     });
-    it('should checkout HEAD', async () => {
+    it('можно создать ветку', async () => {
         const _git = await init();
         await _git.checkout('test-branch', ['-b']);
         return _git.branch().should.eventually.to.equal('test-branch');
     });
-    it('should return log', async () => {
+    it('можно посмотреть историю комитов', async () => {
         const _git = await init();
         return _git.log().should.eventually.to.be.an('array').that
             .have.own.property('length').that.equal(1);
     });
-    it('should open text file', async () => {
-        const _git = await init();
-        return _git.contents('HEAD:.0').should.eventually.to.be
-            .cast((b) => b.toString()).equal('.0');
-    });
-    it('should open dir', async () => {
+    it('можно получить содержимое папки', async () => {
         const _git = await init();
         return _git.open('HEAD:.dir').should.eventually.to.be
             .an('array').that.have.own.property('length').that.equal(2);
     });
-    it('should open file', async () => {
+    it('можно получить содержимое файла', async () => {
         const _git = await init();
         return _git.open('HEAD:.0').should.eventually.to.be
             .cast((b) => b.toString()).an('string').that.equal('.0');

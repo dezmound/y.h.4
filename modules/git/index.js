@@ -283,12 +283,13 @@ class Git {
             cwd: this._pwd,
         }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return data.toString()
+                return Promise.all(data.toString()
                     .split(/[\n\r]+/g)
                     .filter((s) => s)
-                    .map((c) => {
-                        return GitFile.parse(`${this._pwd}${root}${c}`);
-                    });
+                    .map(async (s) => {
+                        let _isDir = await this.thisIs(`${ref}:${root}${s}`);
+                        return GitFile.parse(`${ref}:${root}${s}`, _isDir);
+                    }));
             }
             throw new TypeError(
                 'Ошибка при получении списка файлов: ' + data
@@ -324,7 +325,9 @@ class Git {
      * @return {Promise<string>} tree|blob|commit
      */
     async thisIs(ref) {
-        ref = ref.toString().replace(/^(\/+)|(\:)+$/g, '');
+        ref = ref.toString()
+            .replace(/^(\/+)|(\:)+$/g, '')
+            .replace(/:\//, ':');
         return getCommandPromise(['git', [
             '--no-pager', 'cat-file', '-t', ref,
         ], {
@@ -334,7 +337,7 @@ class Git {
                 return data.toString().trim();
             }
             throw new TypeError(
-                'Ошибка при получении списка файлов: ' + data
+                'Ошибка при получении типа ссылки: ' + data
             );
         });
     }
@@ -457,13 +460,14 @@ class GitFile {
     /**
      * Парсит путь файла, возвращает объект GitFile.
      * @param {string} name
+     * @param {boolean} isDir
      * @return {self}
      */
-    static parse(name) {
+    static parse(name, isDir = false) {
         return new this(
             name.split('/').slice(-1).pop(),
             name,
-            fs.statSync(name).isDirectory()
+            isDir
         );
     }
 
