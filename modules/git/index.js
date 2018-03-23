@@ -47,6 +47,29 @@ const promisifyMethod = (object, method, methodName = '') => {
 };
 
 /**
+ * Возвращает промис для bash команды.
+ * @param {Array<*>} args
+ * @return {Promise<*>}
+ */
+const getCommandPromise = (args) => {
+    const _process = spawn(...args);
+    const _promisified = promisifyMethod(_process, _process.on);
+    const _promisifiedData = promisifyMethod(
+        _process.stdout, _process.stdout.on, 'on'
+    );
+    const _promisifiedErr = promisifyMethod(
+        _process.stderr, _process.stderr.on, 'on'
+    );
+    return Promise.all([
+        Promise.race([
+            _promisifiedData('data'),
+            _promisifiedErr('data'),
+        ]),
+        _promisified('exit'),
+    ]);
+};
+
+/**
  * Исключение, возникающае при работе модуля git.
  */
 class GitError extends Error {
@@ -142,23 +165,9 @@ class Git {
      * @return {Promise<string>}
      */
     async status(flags = []) {
-        const _process = spawn('git', ['status', ...flags], {
+        return getCommandPromise(['git', ['status', ...flags], {
             cwd: this._pwd,
-        });
-        const _promisified = promisifyMethod(_process, _process.on);
-        const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on, 'on'
-        );
-        const _promisifiedErr = promisifyMethod(
-            _process.stderr, _process.stderr.on, 'on'
-        );
-        return Promise.all([
-            Promise.race([
-                _promisifiedData('data'),
-                _promisifiedErr('data'),
-            ]),
-            _promisified('exit').then((code) => code),
-        ]).then(([data, code]) => {
+        }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
                 return data.toString();
             }
@@ -179,23 +188,9 @@ class Git {
         if (branch !== undefined) {
             return this.checkout(branch, flags);
         }
-        const _process = spawn('git', ['branch', ...flags], {
+        return getCommandPromise(['git', ['branch', ...flags], {
             cwd: this._pwd,
-        });
-        const _promisified = promisifyMethod(_process, _process.on);
-        const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on, 'on'
-        );
-        const _promisifiedErr = promisifyMethod(
-            _process.stderr, _process.stderr.on, 'on'
-        );
-        return Promise.all([
-            Promise.race([
-                _promisifiedData('data'),
-                _promisifiedErr('data'),
-            ]),
-            _promisified('exit').then((code) => code),
-        ]).then(([data, code]) => {
+        }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
                 return data.toString().split(/[\n\r]+/ig).filter((s) => {
                     return s.indexOf('*') >= 0;
@@ -211,23 +206,9 @@ class Git {
      * @return {Promise<Array<GitBranch>>}
      */
     async branches(flags = []) {
-        const _process = spawn('git', ['branch', ...flags], {
+        return getCommandPromise(['git', ['branch', ...flags], {
             cwd: this._pwd,
-        });
-        const _promisified = promisifyMethod(_process, _process.on);
-        const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on, 'on'
-        );
-        const _promisifiedErr = promisifyMethod(
-            _process.stderr, _process.stderr.on, 'on'
-        );
-        return Promise.all([
-            Promise.race([
-                _promisifiedData('data'),
-                _promisifiedErr('data'),
-            ]),
-            _promisified('exit').then((code) => code),
-        ]).then(([data, code]) => {
+        }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
                 return data.toString()
                     .split(/\R+/ig)
@@ -248,25 +229,11 @@ class Git {
      */
     async checkout(where, flags = []) {
         const _oldBranch = await this.branch();
-        const _process = spawn('git', [
+        return getCommandPromise(['git', [
             'checkout', ...flags, where.toString(),
         ], {
             cwd: this._pwd,
-        });
-        const _promisified = promisifyMethod(_process, _process.on);
-        const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on, 'on'
-        );
-        const _promisifiedErr = promisifyMethod(
-            _process.stderr, _process.stderr.on, 'on'
-        );
-        return Promise.all([
-            Promise.race([
-                _promisifiedData('data'),
-                _promisifiedErr('data'),
-            ]),
-            _promisified('exit').then((code) => code),
-        ]).then(([data, code]) => {
+        }]).then(([data, code]) => {
             if (code === GitCodes.OK && data.toString().indexOf(where) >= 0) {
                 return _oldBranch;
             }
@@ -281,26 +248,12 @@ class Git {
      * @return {Promise<Array<GitCommit>>}.
      */
     async log(path = 'HEAD', flags = []) {
-        const _process = spawn('git', [
+        return getCommandPromise(['git', [
             'log', `--pretty=format:${logFormat}`,
             path, ...flags, '--',
         ], {
             cwd: this._pwd,
-        });
-        const _promisified = promisifyMethod(_process, _process.on);
-        const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on, 'on'
-        );
-        const _promisifiedErr = promisifyMethod(
-            _process.stderr, _process.stderr.on, 'on'
-        );
-        return Promise.all([
-            Promise.race([
-                _promisifiedData('data'),
-                _promisifiedErr('data'),
-            ]),
-            _promisified('exit').then((code) => code),
-        ]).then(([data, code]) => {
+        }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
                 return JSON.parse(`[${data.toString().replace(/[\n\r]+"/g, '"')
                     .replace(/,+$/g, '')}]`)
@@ -320,27 +273,13 @@ class Git {
      * @return {Promise<Array<GitFile>>}
      */
     async fileStructure(ref = 'HEAD', root='/', flags = []) {
-        const _process = spawn('git', [
+        return getCommandPromise(['git', [
             'ls-tree', '--name-only',
             `${ref.toString()}:${root.replace(/^\//, '')}`,
             ...flags,
         ], {
             cwd: this._pwd,
-        });
-        const _promisified = promisifyMethod(_process, _process.on);
-        const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on, 'on'
-        );
-        const _promisifiedErr = promisifyMethod(
-            _process.stderr, _process.stderr.on, 'on'
-        );
-        return Promise.all([
-            Promise.race([
-                _promisifiedData('data'),
-                _promisifiedErr('data'),
-            ]),
-            _promisified('exit').then((code) => code),
-        ]).then(([data, code]) => {
+        }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
                 return data.toString()
                     .split(/[\n\r]+/g)
@@ -362,26 +301,12 @@ class Git {
      * @return {Promise<Buffer>}
      */
     async contents(ref, flags = []) {
-        const _process = spawn('git', [
+        return getCommandPromise(['git', [
             'cat-file', '-p', ref.toString(),
             ...flags,
         ], {
             cwd: this._pwd,
-        });
-        const _promisified = promisifyMethod(_process, _process.on);
-        const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on, 'on'
-        );
-        const _promisifiedErr = promisifyMethod(
-            _process.stderr, _process.stderr.on, 'on'
-        );
-        return Promise.all([
-            Promise.race([
-                _promisifiedData('data'),
-                _promisifiedErr('data'),
-            ]),
-            _promisified('exit').then((code) => code),
-        ]).then(([data, code]) => {
+        }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
                 return data;
             }
@@ -398,29 +323,15 @@ class Git {
      */
     async open(ref) {
         ref = ref.toString().replace(/^(\/+)|(\:)+$/g, '');
-        const _process = spawn('git', [
-            'cat-file', '-t', ref,
-        ], {
-            cwd: this._pwd,
-        });
-        const _promisified = promisifyMethod(_process, _process.on);
-        const _promisifiedData = promisifyMethod(
-            _process.stdout, _process.stdout.on, 'on'
-        );
-        const _promisifiedErr = promisifyMethod(
-            _process.stderr, _process.stderr.on, 'on'
-        );
         let [_ref, _path] = ref.split(':');
         _ref = _ref.replace(/^\/+/, '');
         _path = _path || '';
         _path = `/${_path}/`.replace('//', '/');
-        return Promise.all([
-            Promise.race([
-                _promisifiedData('data'),
-                _promisifiedErr('data'),
-            ]),
-            _promisified('exit').then((code) => code),
-        ]).then(async ([data, code]) => {
+        return getCommandPromise(['git', [
+            'cat-file', '-t', ref,
+        ], {
+            cwd: this._pwd,
+        }]).then(async ([data, code]) => {
             if (code === GitCodes.OK) {
                 switch (data.toString().trim()) {
                     case 'tree':
@@ -530,7 +441,7 @@ class GitFile {
     }
 
     /**
-     * Парсит название файла, возвращает объект GitFile.
+     * Парсит путь файла, возвращает объект GitFile.
      * @param {string} name
      * @return {self}
      */
