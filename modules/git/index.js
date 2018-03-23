@@ -11,22 +11,22 @@ const GitCodes = {
 
 const logFormat = `
 {
-%n  "commit": "%H",
-%n  "abbreviated_commit": "%h",
-%n  "refs": "%D",
-%n  "subject": "%s",
-%n  "body": "%b",
-%n  "author": {
-        %n    "name": "%aN",
-        %n    "email": "%aE",
-        %n    "date": "%aD"%n  
+"commit": "%H",
+"abbreviated_commit": "%h",
+"refs": "%D",
+"subject": "%s",
+"body": "%b",
+"author": {
+        "name": "%aN",
+        "email": "%aE",
+        "date": "%aD"  
     },
-%n  "commiter": {
-        %n    "name": "%cN",
-        %n    "email": "%cE",
-        %n    "date": "%cD"%n 
+"commiter": {
+        "name": "%cN",
+        "email": "%cE",
+        "date": "%cD" 
      }
-%n},`;
+},`.replace(/\s+/g, '');
 
 /**
  * Преобразует метод класса, для работы на Promise вместо callback.
@@ -255,9 +255,11 @@ class Git {
             cwd: this._pwd,
         }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
-                return JSON.parse(`[${data.toString().replace(/[\n\r]+"/g, '"')
-                    .replace(/,+$/g, '')}]`)
-                    .map((c) => new GitCommit(c));
+                return JSON.parse(`[${
+                    data.toString()
+                        .replace(/([\n\r]+)/g, '')
+                        .replace(/,+$/g, '')
+                    }]`).map((c) => new GitCommit(c));
             }
             throw new TypeError(
                 'Ошибка при получении истории комитов: ' + data
@@ -317,6 +319,27 @@ class Git {
     }
 
     /**
+     * Возвращает тип ссылки.
+     * @param {GitRef|string} ref
+     * @return {Promise<string>} tree|blob|commit
+     */
+    async thisIs(ref) {
+        ref = ref.toString().replace(/^(\/+)|(\:)+$/g, '');
+        return getCommandPromise(['git', [
+            '--no-pager', 'cat-file', '-t', ref,
+        ], {
+            cwd: this._pwd,
+        }]).then(async ([data, code]) => {
+            if (code === GitCodes.OK) {
+                return data.toString().trim();
+            }
+            throw new TypeError(
+                'Ошибка при получении списка файлов: ' + data
+            );
+        });
+    }
+
+    /**
      * Возвращает содержимое файла/директории
      * @param {GitRef|string} ref
      * @return {Promise<Array<GitFile>|Buffer>}
@@ -327,26 +350,17 @@ class Git {
         _ref = _ref.replace(/^\/+/, '');
         _path = _path || '';
         _path = `/${_path}/`.replace('//', '/');
-        return getCommandPromise(['git', [
-            '--no-pager', 'cat-file', '-t', ref,
-        ], {
-            cwd: this._pwd,
-        }]).then(async ([data, code]) => {
-            if (code === GitCodes.OK) {
-                switch (data.toString().trim()) {
-                    case 'tree':
-                        return await this.fileStructure(_ref, _path);
-                    case 'commit':
-                        return await this.fileStructure(_ref, _path);
-                    case 'blob':
-                        return await this.contents(ref);
-                    default:
-                        throw new GitError('Неизвестный тип объекта');
-                }
+        return this.thisIs(ref).then(async (data) => {
+            switch (data) {
+                case 'tree':
+                    return await this.fileStructure(_ref, _path);
+                case 'commit':
+                    return await this.fileStructure(_ref, _path);
+                case 'blob':
+                    return await this.contents(ref);
+                default:
+                    throw new GitError('Неизвестный тип объекта');
             }
-            throw new TypeError(
-                'Ошибка при получении списка файлов: ' + data
-            );
         });
     }
 }
