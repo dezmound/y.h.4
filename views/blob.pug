@@ -1,0 +1,6 @@
+if isImage
+    div
+        img(src='data:' + mime + ';base64,' + contents)
+else
+    code.file-view
+        pre.file-view__contents=contents

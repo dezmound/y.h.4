@@ -1,0 +1,18 @@
+language: node_js
+node_js:
+- 8
+cache:
+  directories:
+  - node_modules
+script:
+- npm run lint:style
+- npm run lint:code
+- npm run test
+- npm run build
+deploy:
+  provider: heroku
+  api_key:
+    secure: uxdmCLAaa+zEc3qjcJ4HX1ITW+XqXAPkXGBNlNEDRaaAVhBVI5ulEiNK8johrxsADd6rGpcbF1im3m3ANrMBdyoPRDOpSOa6oUbfzA/ZzWDPtocs22tUB50BEZpkSTwGsFxjqJKN8VbBWFWw9yyGxPq+enYvXoTqYYzHFIVHZ8YulKsY++JkHVSUPUBzVR6pIoW8/5Fq+yjcki/fy5FYYuJ7lXqUdMg1Hzv6fmKLKCF5qIvgod0K/iBYNc2N/tKlc3PLsaDs5JvIWb6ydUlCYNQdxlUbuLKREOEKcgIQ5LN9i6AyO2Vs1Xtvlh5wF8N4Y93UIgIfxxV3jVKwYcLwtYBXr2LHyjysvbpx0dellxYGo6YLZJPu7w+71Nvoixsl0XGjO3Q7tdbsNv0A6T5VpO1bvKgyr6M2bm9fPIE5AmcJd+ZZIp/pZdWYF9BUSFfpjYAwCDX/kvriA6kqeaghozyH8orbIKcVHCQ+WxK1GjSTLWnj4ZMJxpybFFoufXhoSk1PukfLqolKXDd8XL50tp0u1JYgFwc25CQEfkgaUPZBPaM7cGZDZpk02oY76H/dqLkHGn3w3H+oPapAUOxYzJqtoVg3QQGzESO00dpvnO9rDJvt0IE9sKMAtIudT3rXIQyoMkPxQMG3ilNJRqvGY6YVuC5y+R7YAXOyj/PSs18=
+  app:
+    master: shri-h-4
+    dev: shri-h-4-dev

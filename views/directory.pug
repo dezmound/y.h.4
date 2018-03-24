@@ -1,0 +1,4 @@
+each entry in contents
+    ul.file-directory
+        li(class='file-directory__' + (entry.isDir ? 'dir' : 'file'))
+            a(href=entry.href)=entry.name
