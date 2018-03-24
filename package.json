@@ -5,7 +5,8 @@
   "repository": "https://github.com/dezmound/y.h.4",
   "main": "index.js",
   "scripts": {
-    "lint": "npx eslint \"**/*.js\" && npx stylelint \"**/*.?css\"",
+    "lint:code": "eslint \"**/*.js\"",
+    "lint:style": "stylelint \"src/css/**/*.css\"",
     "dev": "webpack --mode development --watch=true & nodemon app.js",
     "prod": "MODE=prod webpack --mode production && node app.js",
     "build": "MODE=prod webpack --mode production",
