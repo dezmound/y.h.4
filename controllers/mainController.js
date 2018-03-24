@@ -57,7 +57,10 @@ module.exports = (config) => {
                             name: b,
                             href: `/${b}`,
                             isActive: b.toString()
-                                .toLowerCase() === ref.toLowerCase(),
+                                .toLowerCase() === ref.toLowerCase()
+                            || (b.toString()
+                                .toLowerCase() === 'master'
+                            && ref.toLowerCase() === 'head'),
                         };
                     });
                 let commits = (await git.log(ref))
