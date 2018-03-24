@@ -15,7 +15,7 @@ html(lang='ru')
                 h2 Ветки
                 ul
                     each branch in branches
-                        li
+                        li(class='branches__branch' + (branch.isActive ? ' _active' : ''))
                             a(href=branch.href, title=branch.name)=branch.name
             section.contents
                 if directory
@@ -25,11 +25,11 @@ html(lang='ru')
                 else
                     include not_found
             section.commits
-                h2 Комиты
+                h2 Коммиты
                 ul
                     each commit in commits
-                        li
+                        li(class='commits__commit' + (commit.isActive ? ' _active' : ''))
                             a(href=commit.href, title=commit.name)
                                 =commit.abbr
-                            =commit.name
+                            =' ' + commit.name
 script(src='/assets/bundle.js')
