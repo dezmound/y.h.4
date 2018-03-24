@@ -169,7 +169,7 @@ class Git {
             if (code === GitCodes.OK) {
                 return data.toString();
             }
-            throw new TypeError('Ошибка при проверке статуса: ' + data);
+            throw new GitError('Ошибка при проверке статуса: ' + data);
         });
     }
 
@@ -194,7 +194,7 @@ class Git {
                     return s.indexOf('*') >= 0;
                 }).pop().replace(/^[*\s]+|[*\s]+$/g, '');
             }
-            throw new TypeError('Ошибка при получении ветки: ' + data);
+            throw new GitError('Ошибка при получении ветки: ' + data);
         });
     }
 
@@ -215,7 +215,7 @@ class Git {
                         return s.replace(/^[*\s]+|[*\s]+$/g, '');
                     });
             }
-            throw new TypeError('Ошибка при получении списка веток: ' + data);
+            throw new GitError('Ошибка при получении списка веток: ' + data);
         });
     }
 
@@ -236,7 +236,7 @@ class Git {
             if (code === GitCodes.OK && data.toString().indexOf(where) >= 0) {
                 return _oldBranch;
             }
-            throw new TypeError('Ошибка при переключении HEAD: ' + data);
+            throw new GitError('Ошибка при переключении HEAD: ' + data);
         });
     }
 
@@ -261,7 +261,7 @@ class Git {
                         .replace(/,+$/g, '')
                     }]`).map((c) => new GitCommit(c));
             }
-            throw new TypeError(
+            throw new GitError(
                 'Ошибка при получении истории комитов: ' + data
             );
         });
@@ -294,7 +294,7 @@ class Git {
                         return GitFile.parse(`${ref}:${root}${s}`, _isDir);
                     }));
             }
-            throw new TypeError(
+            throw new GitError(
                 'Ошибка при получении списка файлов: ' + data
             );
         });
@@ -316,7 +316,7 @@ class Git {
             if (code === GitCodes.OK) {
                 return data;
             }
-            throw new TypeError(
+            throw new GitError(
                 'Ошибка при получении содержимого файлов: ' + data
             );
         });
@@ -339,7 +339,7 @@ class Git {
             if (code === GitCodes.OK) {
                 return data.toString().trim();
             }
-            throw new TypeError(
+            throw new GitError(
                 'Ошибка при получении типа ссылки: ' + data
             );
         });
