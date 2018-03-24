@@ -1,0 +1,35 @@
+html(lang='ru')
+    head
+        meta(name='robots', content='noindex, nofollow')
+        link(rel='stylesheet', href='/assets/bundle.css')
+        title=app.name
+    body
+        header.commit-info
+            h2.commit-info__subject=commitInfo.subject
+            div.commit-info__body=commitInfo.body
+            div.commit-info__author
+                span.commit-info__author-name=commitInfo.author.name
+            div.commit-info__time=commitInfo.author.date
+        div.container
+            section.branches
+                h2 Ветки
+                ul
+                    each branch in branches
+                        li
+                            a(href=branch.href, title=branch.name)=branch.name
+            section.contents
+                if directory
+                    include directory
+                else if blob
+                    include blob
+                else
+                    include not_found
+            section.commits
+                h2 Комиты
+                ul
+                    each commit in commits
+                        li
+                            a(href=commit.href, title=commit.name)
+                                =commit.abbr
+                            =commit.name
+script(src='/assets/bundle.js')
