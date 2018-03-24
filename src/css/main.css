@@ -1,0 +1,31 @@
+html {
+    font-family: Helvetica, Roboto, Ubuntu Light, "sans-serif";
+    font-size: 10px;
+}
+.container {
+    max-width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    grid-template-areas: "b ct ct ct"
+                         "cm ct ct ct";
+}
+.branches {
+    grid-area: b;
+}
+.contents {
+    grid-area: ct;
+}
+.commits {
+    grid-area: cm;
+}
+.not-found {
+    font-family: Helvetica, Roboto, Ubuntu Light, "sans-serif";
+    font-size: 2.5rem;
+    text-align: center;
+    vertical-align: center;
+}
+.file-view__contents {
+    word-break: break-all;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}

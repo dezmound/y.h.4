@@ -1,10 +1,10 @@
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
-const chaiAs = require('../chai-cast.js');
+const chaiAs = require('../../chai-cast.js');
 const fs = require('fs');
 const tmpDir = require('os').tmpdir();
 const crypto = require('crypto');
-const {Git} = require('../modules/git');
+const {Git} = require('../../modules/git');
 chai.use(chaiAsPromised);
 chai.use(chaiAs);
 chai.should();

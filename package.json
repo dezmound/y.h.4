@@ -10,7 +10,7 @@
     "dev": "webpack --mode development --watch=true & nodemon app.js",
     "prod": "MODE=prod webpack --mode production && node app.js",
     "build": "MODE=prod webpack --mode production",
-    "test": "mocha test"
+    "test": "mocha test/integrations/testGit.js test/unit/**/*.js"
   },
   "author": "",
   "license": "ISC",
