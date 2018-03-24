@@ -1,11 +1,10 @@
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const chaiAs = require('../chai-cast.js');
-const path = require('path');
 const fs = require('fs');
 const tmpDir = require('os').tmpdir();
 const crypto = require('crypto');
-const {Git, GitBranch, GitFile, GitCommit} = require('../modules/git');
+const {Git} = require('../modules/git');
 chai.use(chaiAsPromised);
 chai.use(chaiAs);
 chai.should();
@@ -101,6 +100,11 @@ describe('Git', () => {
         const _git = await init();
         return _git.open('HEAD:.dir').should.eventually.to.be
             .an('array').that.have.own.property('length').that.equal(2);
+    });
+    it('можно получить тип ссылки', async () => {
+        const _git = await init();
+        return _git.thisIs('HEAD:.0').should.eventually.to.be
+            .an('string').that.equal('blob');
     });
     it('можно получить содержимое файла', async () => {
         const _git = await init();
