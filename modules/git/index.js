@@ -1,5 +1,4 @@
 const {spawn} = require('child_process');
-const fs = require('fs');
 const util = require('util');
 const path = require('path');
 const StreamCollector = require('../../utils/StreamCollector');
@@ -19,12 +18,12 @@ const logFormat = `
 "author": {
         "name": "%aN",
         "email": "%aE",
-        "date": "%aD"  
+        "date": "%ad"  
     },
 "commiter": {
         "name": "%cN",
         "email": "%cE",
-        "date": "%cD" 
+        "date": "%cd" 
      }
 },`.replace(/\s+/g, '');
 
@@ -250,6 +249,7 @@ class Git {
     async log(path = 'HEAD', flags = []) {
         return getCommandPromise(['git', [
             '--no-pager', 'log', `--pretty=format:${logFormat}`,
+            '--date=raw',
             path, ...flags, '--',
         ], {
             cwd: this._pwd,
@@ -287,7 +287,10 @@ class Git {
                     .split(/[\n\r]+/g)
                     .filter((s) => s)
                     .map(async (s) => {
-                        let _isDir = await this.thisIs(`${ref}:${root}${s}`);
+                        let _isDir =
+                            (await
+                                this.thisIs(`${ref}:${root}${s}`)
+                            ) === 'tree';
                         return GitFile.parse(`${ref}:${root}${s}`, _isDir);
                     }));
             }
@@ -327,7 +330,7 @@ class Git {
     async thisIs(ref) {
         ref = ref.toString()
             .replace(/^(\/+)|(\:)+$/g, '')
-            .replace(/:\//, ':');
+            .replace(/:\.?\//, ':');
         return getCommandPromise(['git', [
             '--no-pager', 'cat-file', '-t', ref,
         ], {
@@ -348,7 +351,9 @@ class Git {
      * @return {Promise<Array<GitFile>|Buffer>}
      */
     async open(ref) {
-        ref = ref.toString().replace(/^(\/+)|(\:)+$/g, '');
+        ref = ref.toString()
+            .replace(/^(\/+)|(\:)+$/g, '')
+            .replace(/:\.?\//, ':');
         let [_ref, _path] = ref.split(':');
         _ref = _ref.replace(/^\/+/, '');
         _path = _path || '';
