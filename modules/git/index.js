@@ -265,7 +265,8 @@ class Git {
             if (code === GitCodes.OK) {
                 return JSON.parse(`[${
                     data.toString()
-                        .replace(/([\n\r]+)|(^\s+|\s+$)/g, '')
+                        .trim()
+                        .replace(/([\n\r]+)/g, '')
                         .replace(/,+$/g, '')
                     }]`).map((c) => new GitCommit(c));
             }
@@ -292,7 +293,7 @@ class Git {
         }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
                 return Promise.all(data.toString()
-                    .replace(/(^\s+|\s+$)/g, '')
+                    .trim()
                     .split(/[\n\r]+/g)
                     .filter((s) => s)
                     .map(async (s) => {
