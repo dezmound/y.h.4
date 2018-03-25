@@ -10,14 +10,7 @@ try {
     app.set('view engine', 'pug');
     app.set('views', './views');
     app.use('/assets', express.static('assets'));
-    app.use((req, res, next) => {
-        Object.keys(req.params).forEach((p) => {
-            req.params[p] = req.params[p]
-                .replace(/[^0-9a-fA-F]*/g, ''); // Фильтруем
-                                                // пользовательский ввод
-        });
-        next();
-    });
+    app.use('/favicon', express.static('favicon'));
     app.use(router);
     app.listen(config.port, config.host);
 } catch (err) {

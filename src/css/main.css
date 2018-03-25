@@ -40,3 +40,17 @@ html {
     background-color: #dedede;
     border-radius: 8px;
 }
+.breadcrumbs {
+    list-style: none;
+    display: flex;
+}
+.breadcrumbs__breadcrumb:not(._active) {
+    background-color: #dedede;
+    border-radius: 4px;
+    padding: 0 .8rem;
+    cursor: pointer;
+    margin: 0 5px;
+}
+.breadcrumbs .breadcrumbs__breadcrumb:first-child {
+    margin-left: 0;
+}

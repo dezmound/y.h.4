@@ -95,9 +95,11 @@ class Git {
         this._options = Object.assign({
             pwd: path.resolve(__dirname),
             git: 'git',
+            getCommandPromise,
         }, options);
         this._pwd = this._options.pwd;
         this._git = this._options.git;
+        this._getCommandPromise = this._options.getCommandPromise;
     }
 
     /**
@@ -114,7 +116,7 @@ class Git {
      * @return {Promise<boolean>}
      */
     async init(flags = []) {
-        const _process = spawn('git', ['init', ...flags], {
+        const _process = spawn(this._git, ['init', ...flags], {
             cwd: this._pwd,
         });
         return promisifyMethod(_process, _process.on)('exit')
@@ -129,7 +131,7 @@ class Git {
      * @return {Promise<boolean>}
      */
     async commit(commitTitle, commitMessage, flags = []) {
-        const _process = spawn('git', [
+        const _process = spawn(this._git, [
             'commit',
             '-m',
             `${commitTitle}\n\n${commitMessage}`,
@@ -149,7 +151,7 @@ class Git {
      */
     async add(names, flags = []) {
         names = typeof names === 'string' ? [names] : names;
-        const _process = spawn('git', ['add', ...names, ...flags], {
+        const _process = spawn(this._git, ['add', ...names, ...flags], {
             cwd: this._pwd,
         });
         return promisifyMethod(_process, _process.on)('exit')
@@ -163,7 +165,9 @@ class Git {
      * @return {Promise<string>}
      */
     async status(flags = []) {
-        return getCommandPromise(['git', ['--no-pager', 'status', ...flags], {
+        return this._getCommandPromise([this._git, [
+            '--no-pager', 'status', ...flags,
+        ], {
             cwd: this._pwd,
         }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
@@ -186,7 +190,9 @@ class Git {
         if (branch !== undefined) {
             return this.checkout(branch, flags);
         }
-        return getCommandPromise(['git', ['--no-pager', 'branch', ...flags], {
+        return this._getCommandPromise([this._git, [
+            '--no-pager', 'branch', ...flags,
+        ], {
             cwd: this._pwd,
         }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
@@ -204,7 +210,9 @@ class Git {
      * @return {Promise<Array<GitBranch>>}
      */
     async branches(flags = []) {
-        return getCommandPromise(['git', ['--no-pager', 'branch', ...flags], {
+        return this._getCommandPromise([this._git, [
+            '--no-pager', 'branch', ...flags,
+        ], {
             cwd: this._pwd,
         }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
@@ -228,7 +236,7 @@ class Git {
      */
     async checkout(where, flags = []) {
         const _oldBranch = await this.branch();
-        return getCommandPromise(['git', [
+        return this._getCommandPromise([this._git, [
             'checkout', ...flags, where.toString(),
         ], {
             cwd: this._pwd,
@@ -247,7 +255,7 @@ class Git {
      * @return {Promise<Array<GitCommit>>}.
      */
     async log(path = 'HEAD', flags = []) {
-        return getCommandPromise(['git', [
+        return this._getCommandPromise([this._git, [
             '--no-pager', 'log', `--pretty=format:${logFormat}`,
             '--date=raw',
             path, ...flags, '--',
@@ -257,6 +265,7 @@ class Git {
             if (code === GitCodes.OK) {
                 return JSON.parse(`[${
                     data.toString()
+                        .trim()
                         .replace(/([\n\r]+)/g, '')
                         .replace(/,+$/g, '')
                     }]`).map((c) => new GitCommit(c));
@@ -275,7 +284,7 @@ class Git {
      * @return {Promise<Array<GitFile>>}
      */
     async fileStructure(ref = 'HEAD', root='/', flags = []) {
-        return getCommandPromise(['git', [
+        return this._getCommandPromise([this._git, [
             '--no-pager', 'ls-tree', '--name-only',
             `${ref.toString()}:${root.replace(/^\//, '')}`,
             ...flags,
@@ -284,6 +293,7 @@ class Git {
         }]).then(([data, code]) => {
             if (code === GitCodes.OK) {
                 return Promise.all(data.toString()
+                    .trim()
                     .split(/[\n\r]+/g)
                     .filter((s) => s)
                     .map(async (s) => {
@@ -307,7 +317,7 @@ class Git {
      * @return {Promise<Buffer>}
      */
     async contents(ref, flags = []) {
-        return getCommandPromise(['git', [
+        return this._getCommandPromise([this._git, [
             '--no-pager', 'cat-file', '-p', ref.toString(),
             ...flags,
         ], {
@@ -331,7 +341,7 @@ class Git {
         ref = ref.toString()
             .replace(/^(\/+)|(\:)+$/g, '')
             .replace(/:\.?\//, ':');
-        return getCommandPromise(['git', [
+        return this._getCommandPromise([this._git, [
             '--no-pager', 'cat-file', '-t', ref,
         ], {
             cwd: this._pwd,
@@ -513,4 +523,5 @@ module.exports = {
     Git,
     GitBranch,
     GitCommit,
+    GitCodes,
 };

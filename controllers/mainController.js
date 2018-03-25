@@ -25,6 +25,22 @@ module.exports = (config) => {
                 commitInfo.author.date = moment.unix(Number.parseInt(date[0]))
                     .utcOffset(moment(date[1], 'ZZ').utcOffset())
                     .format(config.dateFormat);
+                let breadcrumbs = [];
+                path.split('/')
+                    .filter((s) => s)
+                    .forEach((p, i, arr) => {
+                        if (i === arr.length - 1) {
+                            breadcrumbs.push({
+                                title: p,
+                            });
+                            return;
+                        }
+                        breadcrumbs.push({
+                            title: p,
+                            href: `/${ref}:./${arr.slice(0, i + 1).join('/')}`
+                                .replace(/:\.$/, ':'),
+                        });
+                    });
                 path = path.split('/').slice(0, -1).join('/') + '/';
                 const _isFile = data instanceof Buffer;
                 let _isImage = false;
@@ -83,6 +99,7 @@ module.exports = (config) => {
                     commits,
                     commitInfo,
                     branches,
+                    breadcrumbs,
                 }, appConfig));
             })
             .catch((e) => {
