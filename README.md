@@ -1,9 +1,10 @@
 [![Build Status](https://travis-ci.org/dezmound/y.h.4.svg?branch=dev)](https://travis-ci.org/dezmound/y.h.4)   
 
-README #7
+README #8
 
+Ссылка на репозиторий, отображаемый в приложении: [GitHub Local Repo](https://github.com/dezmound/y.h.3)   
 Heroku Dev App: [Heroku Dev](https://shri-h-4-dev.herokuapp.com)   
-Heroku App: [Heroku App](https://shri-h-4.herokuapp.com)
+Heroku App: [Heroku App](https://shri-h-4.herokuapp.com)    
 
 Source Map:
 ```
