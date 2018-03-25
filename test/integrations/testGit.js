@@ -1,12 +1,12 @@
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
-const chaiAs = require('../../chai-cast.js');
+const chaiCast = require('../../chai-cast.js');
 const fs = require('fs');
 const tmpDir = require('os').tmpdir();
 const crypto = require('crypto');
 const {Git} = require('../../modules/git');
 chai.use(chaiAsPromised);
-chai.use(chaiAs);
+chai.use(chaiCast);
 chai.should();
 
 const init = async () => {
@@ -40,7 +40,7 @@ const initTest = async (git) => {
     await git.checkout('master');
 };
 
-describe('Git', () => {
+describe('Git Integrations', () => {
     it('можно инициализировать репозиторий', () => {
         const path = tmpDir + '/' + crypto.randomBytes(16).toString('hex');
         fs.mkdirSync(path);
