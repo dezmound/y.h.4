@@ -1,3 +1,3 @@
-![travis](https://travis-ci.org/dezmound/y.h.4.svg?branch=dev)   
+[![Build Status](https://travis-ci.org/dezmound/y.h.4.svg?branch=dev)](https://travis-ci.org/dezmound/y.h.4)   
 
-README #6
+README #7
