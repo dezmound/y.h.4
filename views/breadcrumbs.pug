@@ -1,0 +1,7 @@
+ul.breadcrumbs
+    each breadcrumb in breadcrumbs
+        li(class='breadcrumbs__breadcrumb' + (!breadcrumb.href ? ' _active' : ''))
+            if breadcrumb.href
+                a(href=breadcrumb.href)=breadcrumb.title
+            else
+                =breadcrumb.title

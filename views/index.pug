@@ -18,6 +18,7 @@ html(lang='ru')
                         li(class='branches__branch' + (branch.isActive ? ' _active' : ''))
                             a(href=branch.href, title=branch.name)=branch.name
             section.contents
+                include breadcrumbs
                 if directory
                     include directory
                 else if blob
