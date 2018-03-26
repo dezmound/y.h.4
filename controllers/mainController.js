@@ -37,7 +37,7 @@ module.exports = (config) => {
                         }
                         breadcrumbs.push({
                             title: p,
-                            href: `/${ref}:./${arr.slice(0, i + 1).join('/')}`
+                            href: `/${ref}:./${arr.slice(0, i + 1).join('/')}/`
                                 .replace(/:\.$/, ':'),
                         });
                     });
