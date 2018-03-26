@@ -108,7 +108,7 @@ describe('Git Local UI', () => {
             await this.browser.getText('.file-directory a'),
             [
                 '..', '.eslintrc.js', '.gitignore', 'assets',
-                'index.html', 'package-lock.json', 'package.json'
+                'index.html', 'package-lock.json', 'package.json',
             ]
         );
     });
