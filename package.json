@@ -10,15 +10,18 @@
     "dev": "webpack --mode development --watch=true & nodemon app.js",
     "prod": "MODE=prod webpack --mode production && node app.js",
     "build": "MODE=prod webpack --mode production",
-    "test": "mocha test/integrations/testGit.js test/unit/**/*.js"
+    "test": "mocha test/integrations/testGit.js test/unit/**/*.js",
+    "hermione": "hermione test/integrations/hermione/*"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
+    "chai-webdriverio": "^0.4.3",
     "eslint": "^4.19.0",
     "eslint-config-google": "^0.9.1",
+    "hermione": "^0.65.2",
     "mocha": "^5.0.5",
     "stylelint": "^9.1.3"
   },
