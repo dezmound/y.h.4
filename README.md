@@ -1,12 +1,12 @@
 [![Build Status](https://travis-ci.org/dezmound/y.h.4.svg?branch=dev)](https://travis-ci.org/dezmound/y.h.4)   
 
-README #8
+**README #8**     
 
 Ссылка на репозиторий, отображаемый в приложении: [GitHub Local Repo](https://github.com/dezmound/y.h.3)   
 Heroku Dev App: [Heroku Dev](https://shri-h-4-dev.herokuapp.com)   
 Heroku App: [Heroku App](https://shri-h-4.herokuapp.com)    
 
-Source Map:
+**Source Map:**    
 ```
 controllers/
 └── mainController.js // Обрабатывает запросы по роуту /:path
@@ -54,7 +54,7 @@ Git::contains(ref) // получает содержимое объекта по 
 Git::thisIs(ref) // получения типа объекта по ссылке (tree, blob, commit)
 ```
 
-Касаемо инфраструктуры:
+**Касаемо инфраструктуры:**     
 
 Конфигурация приложеня лежит в файле: `./config.js`.
 
@@ -73,4 +73,23 @@ Git::thisIs(ref) // получения типа объекта по ссылке
 heroku.yml
 Dockerfile
 .travis.yml
+```
+
+**Тесты**    
+`Unit` тестов вышло совсем немного, так как по большей части внутри методов    
+класса `Git` раположена достаточно простая логика обработки консольного вывода    
+команды `git`. Наверное было бы правильно написать еще парочку `unit`,     
+в которых бы отличался формат входных данных, но я не стал этого делать.
+Запуск тестов:
+`npm run test` - запускает интеграционные тесты для модуля `Git` и `unit` тесты    
+`npm run hermione` - запускает интеграционные тесты приложения в `Chrome` и `FireFox`
+```
+test/
+├── integrations
+│   ├── hermione
+│   │   └── testUI.js // Тесты WebdriverIO
+│   └── testGit.js  // Тесты функционалности модуля Git
+                    // в работе используют вызовы git в консоли.
+└── unit
+    └── testGit.js // Тесты внутренней логики парсеров.
 ```
